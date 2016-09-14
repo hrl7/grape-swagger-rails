@@ -16,6 +16,13 @@ describe 'Swagger' do
     before do
       @options = GrapeSwaggerRails.options.dup
     end
+
+    it 'evaluates config options correctly' do
+      visit '/swagger'
+      page_options_json = page.evaluate_script("$('html').data('swagger-options')").to_json
+      expect(page_options_json).to eq(@options.marshal_dump.to_json)
+    end
+
     context '#headers' do
       before do
         GrapeSwaggerRails.options.headers['X-Test-Header'] = 'Test Value'
@@ -150,6 +157,55 @@ describe 'Swagger' do
         end
         it 'defaults SwaggerUI docExpansion' do
           expect(page.evaluate_script('window.swaggerUi.options.docExpansion == "none"')).to be true
+        end
+      end
+    end
+    context '#supported_submit_methods' do
+      context 'set all operations' do
+        before do
+          GrapeSwaggerRails.options.supported_submit_methods = %w(get post put delete patch)
+          visit '/swagger'
+        end
+        it 'sets SwaggerUI supportedSubmitMethods with all operations' do
+          expect(page.evaluate_script('window.swaggerUi.options.supportedSubmitMethods.length')).to eq 5
+          find('#endpointListTogger_params', visible: true).click
+          first('span[class="http_method"] a', visible: true).click
+          expect(page).to have_button('Try it out!', disabled: false)
+        end
+      end
+      context 'set some operations' do
+        before do
+          GrapeSwaggerRails.options.supported_submit_methods = ['post']
+          visit '/swagger'
+        end
+        it 'sets SwaggerUI supportedSubmitMethods with some operations' do
+          expect(page.evaluate_script('window.swaggerUi.options.supportedSubmitMethods.length')).to eq 1
+          find('#endpointListTogger_params', visible: true).click
+          first('span[class="http_method"] a', visible: true).click
+          expect(page).not_to have_button('Try it out!')
+        end
+      end
+      context 'set nil' do
+        before do
+          GrapeSwaggerRails.options.supported_submit_methods = nil
+          visit '/swagger'
+        end
+        it 'clears SwaggerUI supportedSubmitMethods' do
+          expect(page.evaluate_script('window.swaggerUi.options.supportedSubmitMethods.length')).to eq 0
+          find('#endpointListTogger_params', visible: true).click
+          first('span[class="http_method"] a', visible: true).click
+          expect(page).not_to have_button('Try it out!')
+        end
+      end
+      context 'not set' do
+        before do
+          visit '/swagger'
+        end
+        it 'defaults SwaggerUI supportedSubmitMethods' do
+          expect(page.evaluate_script('window.swaggerUi.options.supportedSubmitMethods.length')).to eq 5
+          find('#endpointListTogger_params', visible: true).click
+          first('span[class="http_method"] a', visible: true).click
+          expect(page).to have_button('Try it out!', disabled: false)
         end
       end
     end
